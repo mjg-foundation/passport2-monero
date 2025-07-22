@@ -22,7 +22,6 @@ from .magic_scan_validate_address_flow import *
 from .magic_scan_flow import *
 
 from .about_flow import *
-from .apply_passphrase_flow import *
 from .auto_backup_flow import *
 from .backup_flow import *
 from .casa_health_check_common_flow import *

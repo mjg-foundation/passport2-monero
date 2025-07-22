@@ -38,16 +38,22 @@ static void wrapped_ui_wait_callback(uint32_t current, uint32_t total) {
 #include "modtrezorcrypto-bip32.h"
 #include "modtrezorcrypto-bip340.h"
 #include "modtrezorcrypto-bip39.h"
+#if !USE_MONERO
 #include "modtrezorcrypto-blake256.h"
 #include "modtrezorcrypto-blake2b.h"
 #include "modtrezorcrypto-blake2s.h"
+#endif
 #include "modtrezorcrypto-chacha20poly1305.h"
 #include "modtrezorcrypto-crc.h"
 #include "modtrezorcrypto-curve25519.h"
 #include "modtrezorcrypto-ed25519.h"
+#if !USE_MONERO
 #include "modtrezorcrypto-groestl.h"
+#endif
 #include "modtrezorcrypto-hmac.h"
+#if !USE_MONERO
 #include "modtrezorcrypto-nist256p1.h"
+#endif
 #include "modtrezorcrypto-pbkdf2.h"
 #include "modtrezorcrypto-random.h"
 #include "modtrezorcrypto-ripemd160.h"
@@ -55,14 +61,18 @@ static void wrapped_ui_wait_callback(uint32_t current, uint32_t total) {
 #include "modtrezorcrypto-sha1.h"
 #include "modtrezorcrypto-sha256.h"
 #include "modtrezorcrypto-sha3-256.h"
+#if !USE_MONERO
 #include "modtrezorcrypto-sha3-512.h"
 #include "modtrezorcrypto-sha512.h"
 #include "modtrezorcrypto-shamir.h"
 #include "modtrezorcrypto-slip39.h"
+#endif
 #if !BITCOIN_ONLY
 #include "modtrezorcrypto-cardano.h"
-#include "modtrezorcrypto-monero.h"
 #include "modtrezorcrypto-nem.h"
+#endif
+#if USE_MONERO
+#include "modtrezorcrypto-monero.h"
 #endif
 
 STATIC const mp_rom_map_elem_t mp_module_trezorcrypto_globals_table[] = {
@@ -70,10 +80,12 @@ STATIC const mp_rom_map_elem_t mp_module_trezorcrypto_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_aes), MP_ROM_PTR(&mod_trezorcrypto_AES_type)},
     {MP_ROM_QSTR(MP_QSTR_bip32), MP_ROM_PTR(&mod_trezorcrypto_bip32_module)},
     {MP_ROM_QSTR(MP_QSTR_bip39), MP_ROM_PTR(&mod_trezorcrypto_bip39_module)},
+#if !USE_MONERO
     {MP_ROM_QSTR(MP_QSTR_blake256),
      MP_ROM_PTR(&mod_trezorcrypto_Blake256_type)},
     {MP_ROM_QSTR(MP_QSTR_blake2b), MP_ROM_PTR(&mod_trezorcrypto_Blake2b_type)},
     {MP_ROM_QSTR(MP_QSTR_blake2s), MP_ROM_PTR(&mod_trezorcrypto_Blake2s_type)},
+#endif
 #if !BITCOIN_ONLY
     {MP_ROM_QSTR(MP_QSTR_cardano),
      MP_ROM_PTR(&mod_trezorcrypto_cardano_module)},
@@ -85,13 +97,15 @@ STATIC const mp_rom_map_elem_t mp_module_trezorcrypto_globals_table[] = {
      MP_ROM_PTR(&mod_trezorcrypto_curve25519_module)},
     {MP_ROM_QSTR(MP_QSTR_ed25519),
      MP_ROM_PTR(&mod_trezorcrypto_ed25519_module)},
-#if !BITCOIN_ONLY
+#if USE_MONERO
     {MP_ROM_QSTR(MP_QSTR_monero), MP_ROM_PTR(&mod_trezorcrypto_monero_module)},
 #endif
+#if !USE_MONERO
     {MP_ROM_QSTR(MP_QSTR_nist256p1),
      MP_ROM_PTR(&mod_trezorcrypto_nist256p1_module)},
     {MP_ROM_QSTR(MP_QSTR_groestl512),
      MP_ROM_PTR(&mod_trezorcrypto_Groestl512_type)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_hmac), MP_ROM_PTR(&mod_trezorcrypto_Hmac_type)},
 #if !BITCOIN_ONLY
     {MP_ROM_QSTR(MP_QSTR_nem), MP_ROM_PTR(&mod_trezorcrypto_nem_module)},
@@ -105,13 +119,17 @@ STATIC const mp_rom_map_elem_t mp_module_trezorcrypto_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_bip340), MP_ROM_PTR(&mod_trezorcrypto_bip340_module)},
     {MP_ROM_QSTR(MP_QSTR_sha1), MP_ROM_PTR(&mod_trezorcrypto_Sha1_type)},
     {MP_ROM_QSTR(MP_QSTR_sha256), MP_ROM_PTR(&mod_trezorcrypto_Sha256_type)},
+#if !USE_MONERO
     {MP_ROM_QSTR(MP_QSTR_sha512), MP_ROM_PTR(&mod_trezorcrypto_Sha512_type)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_sha3_256),
      MP_ROM_PTR(&mod_trezorcrypto_Sha3_256_type)},
+#if !USE_MONERO
     {MP_ROM_QSTR(MP_QSTR_sha3_512),
      MP_ROM_PTR(&mod_trezorcrypto_Sha3_512_type)},
     {MP_ROM_QSTR(MP_QSTR_shamir), MP_ROM_PTR(&mod_trezorcrypto_shamir_module)},
     {MP_ROM_QSTR(MP_QSTR_slip39), MP_ROM_PTR(&mod_trezorcrypto_slip39_module)},
+#endif
 };
 STATIC MP_DEFINE_CONST_DICT(mp_module_trezorcrypto_globals,
                             mp_module_trezorcrypto_globals_table);

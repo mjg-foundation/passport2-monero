@@ -9,6 +9,7 @@ import microns
 from pages import ErrorPage, PredictiveTextInputPage, SuccessPage, QuestionPage
 from utils import spinner_task
 from tasks import save_seed_task
+from monero_mnemonic_languages import enum_values as languages
 
 
 class RestoreSeedFlow(Flow):
@@ -20,8 +21,8 @@ class RestoreSeedFlow(Flow):
     async def choose_restore_method(self):
         from pages import ChooserPage
 
-        options = [{'label': '24 words', 'value': 24},
-                   {'label': '12 words', 'value': 12}]
+        options = [{'label': '24 words (legacy)', 'value': 24},
+                   {'label': '25 words (legacy)', 'value': 25}]
 
         choice = await ChooserPage(card_header={'title': 'Seed Format'}, options=options).show()
 
@@ -51,8 +52,9 @@ class RestoreSeedFlow(Flow):
         self.goto(self.enter_seed_words)
 
     async def enter_seed_words(self):
+        used_word_list = 'moneroenglish'
         result = await PredictiveTextInputPage(
-            word_list='bip39',
+            word_list=used_word_list,
             total_words=self.seed_length,
             initial_words=self.seed_words).show()
         if result is None:
@@ -66,11 +68,11 @@ class RestoreSeedFlow(Flow):
             self.goto(self.validate_seed_words)
 
     async def validate_seed_words(self):
-        from trezorcrypto import bip39
+        import moneromnemonics
 
         self.mnemonic = ' '.join(self.seed_words)
 
-        if not bip39.check(self.mnemonic):
+        if not moneromnemonics.legacy.check(self.mnemonic, languages.english):
             self.goto(self.invalid_seed)
         else:
             self.goto(self.valid_seed)
@@ -89,19 +91,9 @@ class RestoreSeedFlow(Flow):
         self.goto(self.enter_seed_words)
 
     async def valid_seed(self):
-        from foundation import bip39
+        import moneromnemonics
 
-        entropy = bytearray(33)  # Includes and extra byte for the checksum bits
-
-        len = bip39.mnemonic_to_bits(self.mnemonic, entropy)
-
-        if len == 264:  # 24 words x 11 bits each
-            trim_pos = 32
-        elif len == 198:  # 18 words x 11 bits each
-            trim_pos = 24
-        elif len == 132:  # 12 words x 11 bits each
-            trim_pos = 16
-        entropy = entropy[:trim_pos]  # Trim off the excess (including checksum bits)
+        entropy = moneromnemonics.legacy.to_seed(self.mnemonic, languages.english)
 
         (error,) = await spinner_task('Saving seed', save_seed_task, args=[entropy])
         if error is None:

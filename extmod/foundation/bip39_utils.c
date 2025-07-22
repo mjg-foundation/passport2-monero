@@ -12,8 +12,10 @@
 #define MAX_WORD_LEN 8
 
 #include "bip39_utils.h"
+#include "legacy_monero_mnemonic.h"
 
 extern word_info_t bip39_word_info[];
+extern word_info_t monero_english_word_info[];
 
 #ifdef UNUSED_CODE
 uint32_t letter_to_number(char ch) {
@@ -108,6 +110,27 @@ void get_words_matching_prefix(char*              prefix,
                 break;
             }
             total_written += len;
+            //We need to manually fill in words that are over 8 characters long.
+            //Since keypad_digits is limited to 9 characters and offsets is limited to 8,
+            //full coverage under the same scheme would require keypad_digits to be uint64_t
+            //and offsets to be uint32_t. However, that would use at least twice the
+            //stack size for monero_english_word_info, when the overall available stack is
+            //already pretty limited. So, this work around is being used instead.
+            //Past the first two characters of any given string there is only one corresponding
+            //word that can be found in the word list. So as long as the search word being used
+            //is over 2 characters, we're using 8, this is safe in finding the correct word.
+            if (word_info == monero_english_word_info && len == MAX_WORD_LEN) {
+                int32_t word_index = monero_mnemonic_find_word_index_allowing_partial_word((const char*)pnext_match, MoneroEnglish, 1);
+                if (word_index >= 0 && word_index < MONERO_WORDLIST_WORD_COUNT) {
+                    const char* found_word = get_monero_mnemonic_word_from_list(word_index, MoneroEnglish);
+                    if(found_word && strlen(found_word) > 0) {
+                        strcpy(pnext_match, found_word);
+                        uint8_t length_diff = strlen(found_word) - len;
+                        total_written += length_diff;
+                        pnext_match += length_diff;
+                    }
+                }
+            }
 
             pnext_match += len;
             *pnext_match = ',';

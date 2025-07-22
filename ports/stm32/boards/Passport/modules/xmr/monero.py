@@ -1,4 +1,4 @@
-from apps.monero.xmr import crypto
+from xmr import crypto
 
 if False:
     from apps.monero.xmr.types import Ge25519, Sc25519

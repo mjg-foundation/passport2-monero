@@ -255,8 +255,6 @@ class UI():
                     'args': {'menu': account_menu, 'is_top_level': True},
                     'account': account
                 }
-                if len(stash.bip39_passphrase) > 0:
-                    account_card['icon'] = lv.ICON_PASSPHRASE
 
                 card_descs.append(account_card)
 
@@ -264,10 +262,7 @@ class UI():
 
             for extension in supported_extensions:
                 if common.settings.get('ext.{}.enabled'.format(extension['name']), False):
-                    if len(stash.bip39_passphrase) > 0:
-                        extension['card']['icon'] = lv.ICON_PASSPHRASE
-                    else:
-                        extension['card']['icon'] = None
+                    extension['card']['icon'] = None
                     card_descs.append(extension['card'])
 
             more_card = {

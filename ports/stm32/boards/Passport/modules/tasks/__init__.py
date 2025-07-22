@@ -7,7 +7,6 @@ import passport
 if passport.HAS_FUEL_GAUGE:
     from .fuelgauge_task import fuelgauge_task
 
-from .apply_passphrase_task import apply_passphrase_task
 from .auto_shutdown_task import auto_shutdown_task
 from .bip85_seed_task import *
 from .calculate_file_sha256_task import calculate_file_sha256_task

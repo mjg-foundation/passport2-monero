@@ -166,6 +166,14 @@ $(FOUNDATION_RUST_LIB): $(FOUNDATION_RUST_SRC)
 	@cargo build --manifest-path $(FOUNDATION_RUST)/Cargo.toml --target $(RUST_TARGET) --release
 # FOUNDATION CHANGE: END
 
+#Monero Mnemonics
+
+MM_PATH = extmod/moneromnemonics
+MM_DIR = $(TOP)/$(MM_PATH)
+MM_MPY = $(MM_PATH)/moneromnemonics.c
+INC += -I$(MM_DIR)
+SRC_MOD += $(MM_PATH)/legacy_monero_mnemonic.c $(MM_MPY)
+
 
 # py object files
 PY_CORE_O_BASENAME = $(addprefix py/,\
@@ -329,10 +337,12 @@ PY_EXTMOD_O_BASENAME = \
 	lib/embed/abort_.o \
 	lib/utils/printf.o \
 	extmod/bufhelper.o \
+	extmod/moneromnemonics/moneromnemonics.o \
 	extmod/foundation/modfoundation.o \
 	extmod/foundation/bip39_utils.o \
     extmod/foundation/bip39_word_info.o \
     extmod/foundation/bytewords_word_info.o \
+    extmod/foundation/monero_english_word_info.o \
     extmod/foundation/modtcc-codecs.o \
     extmod/foundation/strnlen.o \
     extmod/foundation/image_conversion.o \
@@ -380,6 +390,10 @@ PY_EXTMOD_O_BASENAME = \
 	extmod/trezor-firmware/crypto/chacha20poly1305/chacha_merged.o \
 	extmod/trezor-firmware/crypto/chacha20poly1305/poly1305-donna.o \
 	extmod/trezor-firmware/crypto/chacha20poly1305/rfc7539.o \
+	extmod/trezor-firmware/crypto/monero/xmr.o \
+	extmod/trezor-firmware/crypto/monero/serialize.o \
+	extmod/trezor-firmware/crypto/monero/range_proof.o \
+	extmod/trezor-firmware/crypto/monero/base58.o \
     extmod/trezor-firmware/crypto/shamir.o \
     extmod/trezor-firmware/crypto/groestl.o \
     extmod/trezor-firmware/crypto/slip39.o \

@@ -95,17 +95,10 @@ def postmix_menu():
 
 
 def plus_menu():
-    from utils import is_passphrase_active
-    from flows import NewAccountFlow, ApplyPassphraseFlow
+    from flows import NewAccountFlow
 
     return [
-        {'icon': lv.ICON_ADD_ACCOUNT, 'label': 'New Account', 'flow': NewAccountFlow},
-        {'icon': lv.ICON_PASSPHRASE, 'label': 'Enter Passphrase', 'flow': ApplyPassphraseFlow,
-         'statusbar': {'title': 'PASSPHRASE'}, 'is_visible': lambda: not is_passphrase_active()},
-        {'icon': lv.ICON_PASSPHRASE, 'label': 'Clear Passphrase', 'flow': ApplyPassphraseFlow,
-         'args': {'passphrase': ''}, 'statusbar': {'title': 'PASSPHRASE'}, 'is_visible': is_passphrase_active},
-        {'icon': lv.ICON_PASSPHRASE, 'label': 'Change Passphrase', 'flow': ApplyPassphraseFlow,
-         'statusbar': {'title': 'PASSPHRASE'}, 'is_visible': is_passphrase_active},
+        {'icon': lv.ICON_ADD_ACCOUNT, 'label': 'New Account', 'flow': NewAccountFlow}
     ]
 
 

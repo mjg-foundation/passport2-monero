@@ -1,12 +1,16 @@
-from trezor.crypto import monero as tcry
+from trezorcrypto import monero as tcry
 
-from apps.monero.xmr.networks import NetworkTypes, net_version
+from xmr.networks import NetworkTypes, net_version
 
 if False:
     from apps.monero.xmr.types import Ge25519
     from trezor.messages import MoneroAccountPublicAddress
     from trezor.messages import MoneroTransactionDestinationEntry
 
+class AddressTypes:
+    PRIMARY = 0
+    INTEGRATED = 1
+    SUB = 2
 
 def addr_to_hash(addr: MoneroAccountPublicAddress) -> bytes:
     """
@@ -99,3 +103,61 @@ def get_change_addr_idx(
         ):
             change_idx = idx
     return change_idx
+
+def is_valid_address(address):
+    from xmr.addresses import decode_addr
+    prefix = 'monero:'
+    if address[0:len(prefix)].lower() == prefix:
+        params_start = address.find('?')
+        if params_start == -1:
+            params_start = len(address)
+
+        address = address[len(prefix):params_start]
+
+    try:
+        version, _, _ = decode_addr(bytes(address, 'ascii'))
+    except Exception as e:
+        return '', False, -1
+
+    return address, True, version
+
+def get_address_info(address=None, network_prefix=None):
+    from xmr.networks import MainNet, TestNet, StageNet
+    if network_prefix == None:
+        if address == None:
+            return None, None, None
+        address, is_valid, network_prefix = is_valid_address(address)
+        if not is_valid:
+            return None, None, None
+
+    network_type = None
+    address_type = None
+    if network_prefix == MainNet.PUBLIC_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.MAINNET
+        address_type = AddressTypes.PRIMARY
+    elif network_prefix == MainNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.MAINNET
+        address_type = AddressTypes.INTEGRATED
+    elif network_prefix == MainNet.PUBLIC_SUBADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.MAINNET
+        address_type = AddressTypes.SUB
+    elif network_prefix == TestNet.PUBLIC_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.TESTNET
+        address_type = AddressTypes.PRIMARY
+    elif network_prefix == TestNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.TESTNET
+        address_type = AddressTypes.INTEGRATED
+    elif network_prefix == TestNet.PUBLIC_SUBADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.TESTNET
+        address_type = AddressTypes.SUB
+    elif network_prefix == StageNet.PUBLIC_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.STAGENET
+        address_type = AddressTypes.PRIMARY
+    elif network_prefix == StageNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.STAGENET
+        address_type = AddressTypes.INTEGRATED
+    elif network_prefix == StageNet.PUBLIC_SUBADDRESS_BASE58_PREFIX:
+        network_type = NetworkTypes.STAGENET
+        address_type = AddressTypes.SUB
+
+    return address, network_type, address_type

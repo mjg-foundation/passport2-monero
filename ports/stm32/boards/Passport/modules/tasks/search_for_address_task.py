@@ -12,54 +12,42 @@
 
 async def search_for_address_task(
         on_done,
-        path,
-        start_address_idx,
+        account_number,
         address,
-        addr_type,
-        multisig_wallet,
-        is_change,
-        max_to_check,
-        reverse):
+        address_type,
+        network_type,
+        lower,
+        upper):
 
     import stash
     from errors import Error
     from uasyncio import sleep_ms
+    from xmr.monero import generate_monero_keys, generate_sub_address_keys
+    from xmr.addresses import AddressTypes, encode_addr, decode_addr
+    from xmr.networks import NetworkTypes, net_version
+    from xmr import crypto
 
     try:
         with stash.SensitiveValues() as sv:
-            if multisig_wallet:
-                # NOTE: Can't easily reverse order here, so this is slightly less efficient
-                for (curr_idx, paths, curr_address, script) in multisig_wallet.yield_addresses(
-                    start_address_idx,
-                    max_to_check,
-                        change_idx=1 if is_change else 0):
-                    # print('Multisig: curr_idx={}: paths={} curr_address = {}'.format(curr_idx, paths, curr_address))
+            _, spend_pub, view_priv, view_pub = generate_monero_keys(sv.raw)
 
-                    if curr_address == address:
-                        # NOTE: Paths are the full paths of the addresses of each signer
-                        await on_done(curr_idx, paths, None)
-                        return
-                    await sleep_ms(1)
+            if address_type == AddressTypes.PRIMARY or address_type == AddressTypes.INTEGRATED:
+                _, s_p, v_p = decode_addr(bytes(address, 'ascii'))
+                match = crypto.encodepoint(spend_pub) == s_p and crypto.encodepoint(view_pub) == v_p
+                await on_done(0 if match else -1, None if match else Error.ADDRESS_NOT_FOUND)
+                return
 
-            else:
-                r = range(start_address_idx, start_address_idx + max_to_check)
-                if reverse:
-                    r = reversed(r)
+            for i in range(lower, upper):
+                current_spend_pub, current_view_pub = generate_sub_address_keys(view_priv, spend_pub, account_number, i)
+                public_address = encode_addr(net_version(network_type, address_type == AddressTypes.SUB, address_type == AddressTypes.INTEGRATED), crypto.encodepoint(current_spend_pub), crypto.encodepoint(current_view_pub)).decode('ascii')
+                # print('i={}: indices=({}, {}) address_type={} public_address={} address={}\n'.format(i, account_number, i, address_type, public_address, address))
+                if public_address == address:
+                    await on_done(i, None)
+                    return
+                await sleep_ms(1)
 
-                for curr_idx in r:
-                    addr_path = '{}/{}/{}'.format(path, is_change, curr_idx)  # Zero for non-change address
-                    # print('Singlesig: addr_path={}'.format(addr_path))
-                    node = sv.derive_path(addr_path)
-                    curr_address = sv.chain.address(node, addr_type)
-                    # print('           curr_idx={}: path={} addr_type={} curr_address = {}'.format(curr_idx, addr_path,
-                    #       addr_type, curr_address))
-                    if curr_address == address:
-                        await on_done(curr_idx, addr_path, None)
-                        return
-                    await sleep_ms(1)
-
-        await on_done(-1, None, Error.ADDRESS_NOT_FOUND)
+        await on_done(-1, Error.ADDRESS_NOT_FOUND)
     except Exception as e:
         # print('EXCEPTION: e={}'.format(e))
         # Any address handling exceptions result in no address found
-        await on_done(-1, None, Error.ADDRESS_NOT_FOUND)
+        await on_done(-1, Error.ADDRESS_NOT_FOUND)

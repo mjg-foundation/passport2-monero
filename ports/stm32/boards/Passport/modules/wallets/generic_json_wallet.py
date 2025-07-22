@@ -10,15 +10,11 @@
 # generic_json_wallet.py - Generic JSON Wallet export
 #
 
-import chains
 import ujson
 import stash
-from utils import xfp2str, to_str
-from common import settings
-from public_constants import AF_CLASSIC, AF_P2WPKH, AF_P2WPKH_P2SH, AF_P2WSH_P2SH, AF_P2WSH
 from data_codecs.qr_type import QRType
 from foundation import ur
-
+from xmr.monero import generate_monero_keys
 
 def create_generic_json_wallet(sw_wallet=None,
                                addr_type=None,
@@ -27,45 +23,19 @@ def create_generic_json_wallet(sw_wallet=None,
                                legacy=False,
                                export_mode='qr',
                                qr_type=QRType.UR2):
-    # Generate data that other programers will use to import from (single-signer)
-
-    chain = chains.current_chain()
-    rv = dict(chain=chain.ctype,
-              # Don't include these for privacy reasons
-              xpub=settings.get('xpub'),
-              xfp=xfp2str(settings.get('xfp')),
-              account=acct_num)
-
-    accts = []
-
+    accts = [{'fmt': addr_type, 'deriv': None, 'acct': acct_num}]
     with stash.SensitiveValues() as sv:
-        # Each of these paths will have /{change}/{idx} in usage (not hardened)
-        for name, deriv, fmt, atype, is_multisig in [
-            ('bip44', "m/44'/{coin_type}'/{acct}'", AF_CLASSIC, 'p2pkh', False),
-            ('bip49', "m/49'/{coin_type}'/{acct}'", AF_P2WPKH_P2SH, 'p2sh-p2wpkh', False),   # was "p2wpkh-p2sh"
-            ('bip84', "m/84'/{coin_type}'/{acct}'", AF_P2WPKH, 'p2wpkh', False),
-            ('bip48_1', "m/48'/{coin_type}'/{acct}'/1'", AF_P2WSH_P2SH, 'p2sh-p2wsh', True),
-            ('bip48_2', "m/48'/{coin_type}'/{acct}'/2'", AF_P2WSH, 'p2wsh', True),
-        ]:
-            dd = deriv.format(coin_type=chain.b44_cointype, acct=acct_num)
-            node = sv.derive_path(dd)
-            xfp = xfp2str(node.my_fingerprint())
-            xp = chain.serialize_public(node, AF_CLASSIC)
-            zp = chain.serialize_public(node, fmt) if fmt != AF_CLASSIC else None
+        _, spend_pub, private_view_key, view_pub = generate_monero_keys(sv.raw)
+        #TODO: Generate Testnet addresses too after chains is updated to monero
+        try:
+            from xmr.addresses import encode_addr
+            from xmr.networks import NetworkTypes, net_version
+            from xmr import crypto
+            public_address = encode_addr(net_version(NetworkTypes.MAINNET), crypto.encodepoint(spend_pub), crypto.encodepoint(view_pub))
+        except Exception as e:
+            return (dict(error=e), accts)
 
-            if is_multisig:
-                first_address = None
-            else:
-                #  Include first non-change address for single-sig wallets: 0/0
-                node.derive(0)
-                node.derive(0)
-                first_address = chain.address(node, fmt)
-
-            accts.append({'fmt': fmt, 'deriv': dd, 'acct': acct_num, 'xfp': xfp})
-
-            rv[name] = dict(deriv=dd, xpub=xp, xfp=xfp, first=first_address, name=atype)
-            if zp:
-                rv[name]['_pub'] = zp
+    rv = dict(privateViewKey=''.join('{:02x}'.format(x) for x in crypto.encodeint(private_view_key)), primaryAddress=public_address, restoreHeight=0)
 
     msg = ujson.dumps(rv)
 

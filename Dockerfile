@@ -45,8 +45,8 @@ RUN rustup component add clippy && \
     rustup target add x86_64-unknown-none
 
 # Install binaries using cargo.
-RUN cargo install cbindgen@^0.24 && \
-    cargo install just@^1.13 && \
+RUN cargo install --locked cbindgen@0.24.1 && \
+    cargo install --locked just@1.13.0 && \
     mv /cargo/bin/cbindgen /usr/local/bin/cbindgen && \
     mv /cargo/bin/just /usr/local/bin/just && \
     chmod 755 /usr/local/bin/cbindgen && \

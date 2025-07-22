@@ -17,6 +17,7 @@ from styles.colors import DEFAULT_LARGE_ICON_COLOR
 import ustruct
 import uos
 import trezorcrypto
+import moneromnemonics
 import stash
 from ubinascii import hexlify as b2a_hex
 from ubinascii import unhexlify as a2b_hex
@@ -1255,8 +1256,7 @@ def are_hidden_keys_showing():
 
 
 def is_passphrase_active():
-    import stash
-    return stash.bip39_passphrase != ''
+    return False
 
 
 MSG_CHARSET = range(32, 127)
@@ -1319,8 +1319,9 @@ async def clear_psbt_flash(psbt_len):
 
 
 def get_words_from_seed(seed):
+    from monero_mnemonic_languages import enum_values as languages
     try:
-        words = trezorcrypto.bip39.from_data(seed).split(' ')
+        words = moneromnemonics.legacy.from_seed(seed, languages.english).split(' ')
         return (words, None)
     except Exception as e:
         return (None, '{}'.format(e))

@@ -7,8 +7,8 @@
 # https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-00#section-4
 # https://github.com/monero-project/research-lab
 
-from trezor.crypto import monero as tcry, random
-from trezor.crypto.hashlib import sha3_256
+from trezorcrypto import monero as tcry, random
+from trezorcrypto import sha3_256
 
 if False:
     from apps.monero.xmr.types import Sc25519, Ge25519

@@ -14,8 +14,8 @@ class ViewSeedWordsFlow(Flow):
     async def show_warning(self):
         from flows import SeedWarningFlow
 
-        mention_passphrase = False if self.external_key else True
-        result = await SeedWarningFlow(mention_passphrase=mention_passphrase).run()
+#        mention_passphrase = False if self.external_key else True
+        result = await SeedWarningFlow(mention_passphrase=False).run()
 
         if not result:
             self.set_result(False)
@@ -34,6 +34,6 @@ class ViewSeedWordsFlow(Flow):
             return
 
         result = await SeedWordsListPage(words=words).show()
-        if stash.bip39_passphrase != '' and not self.external_key:
-            await InfoPage(text='Passphrase: {}'.format(stash.bip39_passphrase)).show()
+#        if stash.bip39_passphrase != '' and not self.external_key:
+#            await InfoPage(text='Passphrase: {}'.format(stash.bip39_passphrase)).show()
         self.set_result(result)

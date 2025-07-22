@@ -77,7 +77,6 @@ freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
 freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
        ('flows/__init__.py',
         'flows/about_flow.py',
-        'flows/apply_passphrase_flow.py',
         'flows/auto_backup_flow.py',
         'flows/backup_common_flow.py',
         'flows/backup_flow.py',
@@ -230,7 +229,6 @@ freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
 # Tasks
 freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
        ('tasks/__init__.py',
-        'tasks/apply_passphrase_task.py',
         'tasks/auto_shutdown_task.py',
         'tasks/bip85_seed_task.py',
         'tasks/calculate_file_sha256_task.py',
@@ -328,30 +326,12 @@ freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
 # Wallets
 freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
        ('wallets/__init__.py',
-        'wallets/bitcoin_core.py',
-        'wallets/bluewallet.py',
-        'wallets/btcpay.py',
-        'wallets/caravan.py',
-        'wallets/casa.py',
+        'wallets/anonero.py',
         'wallets/constants.py',
-        'wallets/dux_reserve.py',
-        'wallets/electrum.py',
-        'wallets/envoy.py',
-        'wallets/fullynoded.py',
         'wallets/generic_json_wallet.py',
-        'wallets/gordian.py',
-        'wallets/lily.py',
-        'wallets/multisig_import.py',
-        'wallets/multisig_json.py',
-        'wallets/nunchuk.py',
-        'wallets/simple_bitcoin_wallet.py',
-        'wallets/sparrow.py',
-        'wallets/specter.py',
+        'wallets/monero_cli.py',
         'wallets/sw_wallets.py',
-        'wallets/utils.py',
-        'wallets/vault.py',
-        'wallets/wasabi.py',
-        'wallets/keeper.py'))
+        'wallets/utils.py'))
 
 # Extensions
 freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
@@ -360,5 +340,13 @@ freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
         'extensions/casa_extension.py',
         'extensions/postmix_extension.py',
         'extensions/key_manager_extension.py'))
+
+# Xmr
+freeze('$(MPY_DIR)/ports/stm32/boards/Passport/modules',
+       ('monero_mnemonic_languages.py',
+        'xmr/addresses.py',
+        'xmr/crypto/__init__.py',
+        'xmr/monero.py',
+        'xmr/networks.py'))
 
 include("$(MPY_DIR)/extmod/uasyncio/manifest.py")

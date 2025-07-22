@@ -29,7 +29,7 @@ class SeedWordsListPage(Page):
         self.prev_card_descs = None
         self.prev_card_idx = None
 
-        if len(self.words) == 24:
+        if len(self.words) == 24 or len(self.words) == 25:
             self.num_pages = 2
             right_micron = microns.Forward
         else:
@@ -54,7 +54,7 @@ class SeedWordsListPage(Page):
         with Stylize(self.container) as default:
             default.flex_fill()
             # default.bg_color(RED, opa=64)
-            if len(words) == 24:
+            if len(words) == 24 or len(words) == 25:
                 default.pad(top=8, bottom=8)
             else:
                 default.align(lv.ALIGN.CENTER)
@@ -81,6 +81,8 @@ class SeedWordsListPage(Page):
         words_per_page = len(self.words) // self.num_pages
 
         words_per_column = words_per_page // _NUM_COLUMNS
+        if self.page_idx == self.num_pages-1 and len(self.words) % 2 != 0:
+            words_per_column += 1
         word_idx = self.page_idx * words_per_page
         for col in range(_NUM_COLUMNS):
             number_views[col] = View(flex_flow=lv.FLEX_FLOW.COLUMN)
@@ -89,7 +91,7 @@ class SeedWordsListPage(Page):
             number_views[col].set_no_scroll()
             with Stylize(number_views[col]) as default:
                 # default.bg_color(BLUE, opa=64)
-                if len(self.words) == 24:
+                if len(self.words) == 24 or len(self.words) == 25:
                     default.pad_row(6)
                 else:
                     default.pad_row(4)
@@ -101,12 +103,14 @@ class SeedWordsListPage(Page):
             with Stylize(word_views[col]) as default:
                 # default.bg_color(GREEN, opa=64)
                 default.flex_fill()
-                if len(self.words) == 24:
+                if len(self.words) == 24 or len(self.words) == 25:
                     default.pad_row(6)
                 else:
                     default.pad_row(4)
 
             for w in range(words_per_column):
+                if word_idx >= len(self.words):
+                    continue
                 # Add the number
                 number_view = Label(
                     text='{}'.format(recolor(HIGHLIGHT_TEXT_HEX, str(word_idx + 1))),

@@ -40,7 +40,7 @@ def net_version(
     elif network_type == NetworkTypes.STAGENET:
         c_net = StageNet
     else:
-        raise ValueError(f"Unknown network type: {network_type}")
+        raise ValueError("Unknown network type: {}".format(network_type))
 
     prefix = c_net.PUBLIC_ADDRESS_BASE58_PREFIX
     if is_subaddr:

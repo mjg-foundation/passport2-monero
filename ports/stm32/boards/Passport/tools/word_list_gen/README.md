@@ -11,11 +11,13 @@ in a different language.
 
 To compile it:
 
-    gcc word_list_gen.c bip39_words.c bytewords_words.c -o word_list_gen
+    gcc word_list_gen.c bip39_words.c bytewords_words.c monero_english_words.c -o word_list_gen
 
 To generate the word_info_t array:
 
     ./bip39_gen > ../bip39_word_info.c
+    
+    ./word_list_gen monero_english > ../monero_english_word_info.c
 
 You can test the output with:
 

@@ -4,7 +4,8 @@
 # get_seed_words_task.py - Task to get the seed words of the current wallet.
 
 import stash
-import trezorcrypto
+import moneromnemonics
+from monero_mnemonic_languages import enum_values as languages
 
 
 async def get_seed_words_task(on_done):
@@ -12,8 +13,7 @@ async def get_seed_words_task(on_done):
         with stash.SensitiveValues() as sv:
             assert sv.mode == 'words'
 
-            words = trezorcrypto.bip39.from_data(sv.raw).split(' ')
-
+            words = moneromnemonics.legacy.from_seed(sv.raw, languages.english).split(' ')
             await on_done(words, None)
 
     except Exception as e:

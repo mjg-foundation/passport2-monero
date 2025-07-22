@@ -22,6 +22,7 @@ import uctypes
 import gc
 from pincodes import SE_SECRET_LEN
 
+marker_value = 0x82
 
 def blank_object(item):
     # Use/abuse uctypes to blank objects until python. Will likely
@@ -47,83 +48,33 @@ def blank_object(item):
 class SecretStash:
 
     @staticmethod
-    def encode(seed_bits=None, master_secret=None, xprv=None):
+    def encode(seed_bits):
         nv = bytearray(SE_SECRET_LEN)
 
         if seed_bits:
-            # typical: seed bits without checksum bits
             vlen = len(seed_bits)
 
-            # TODO: Do we support all of these?s
-            assert vlen in [16, 24, 32]
-            nv[0] = 0x80 | ((vlen // 8) - 2)
+            assert vlen == 32
+            nv[0] = marker_value
             nv[1:1 + vlen] = seed_bits
-
-        elif master_secret:
-            # between 128 and 512 bits of master secret for BIP32 key derivation
-            vlen = len(master_secret)
-            assert 16 <= vlen <= 64
-            nv[0] = vlen
-            nv[1:1 + vlen] = master_secret
-
-        elif xprv:
-            # master xprivkey, which could be a subkey of something we don't know
-            # - we record only the minimum
-            assert isinstance(xprv, trezorcrypto.bip32.HDNode)
-            nv[0] = 0x01
-            nv[1:33] = xprv.chain_code()
-            nv[33:65] = xprv.private_key()
-
         return nv
 
     @staticmethod
-    def decode(secret, _bip39pw=''):
+    def decode(secret):
         # expecting 72-bytes of secret payload; decode meaning
         # returns:
-        #    type, secrets bytes, HDNode(root)
+        #    type, secrets bytes
         #
-        marker = secret[0]
+        retrieved_marker = secret[0]
 
-        if marker == 0x01:
-            # xprv => BIP32 private key values
-            ch, pk = secret[1:33], secret[33:65]
-            assert not _bip39pw
+        if retrieved_marker & marker_value:
+            seed_bits = secret[1:33]
 
-            return 'xprv', ch + pk, trezorcrypto.bip32.HDNode(chain_code=ch, private_key=pk,
-                                                              child_num=0, depth=0, fingerprint=0)
-
-        if marker & 0x80:
-            # seed phrase
-            ll = ((marker & 0x3) + 2) * 8
-
-            # note:
-            # - byte length > number of words
-            # - not storing checksum
-            assert ll in [16, 24, 32]
-
-            # make master secret, using the memonic words, and passphrase (or empty string)
-            seed_bits = secret[1:1 + ll]
-            ms = trezorcrypto.bip39.seed(trezorcrypto.bip39.from_data(seed_bits), _bip39pw)
-
-            hd = trezorcrypto.bip32.from_seed(ms, 'secp256k1')
-
-            return 'words', seed_bits, hd
-
+            return 'words', seed_bits
+        elif retrieved_marker == 0x01:
+            return 'bitcoin_xprv', None
         else:
-            # variable-length master secret for BIP32
-            vlen = secret[0]
-            assert 16 <= vlen <= 64
-            assert not _bip39pw
-
-            ms = secret[1:1 + vlen]
-            hd = trezorcrypto.bip32.from_seed(ms, 'secp256k1')
-
-            return 'master', ms, hd
-
-
-# optional global value: user-supplied passphrase to salt BIP39 seed process
-bip39_passphrase = ''
-bip39_hash = ''
+            return 'unknown', None
 
 
 class SensitiveValues:
@@ -147,17 +98,17 @@ class SensitiveValues:
             self.secret = secret
             self.spots = []
 
-        # backup during volatile bip39 encryption: do not use passphrase
-        self._bip39pw = '' if for_backup else str(bip39_passphrase)
-        # print('self._bip39pw={}'.format(self._bip39pw))
 
     def __enter__(self):
         import chains
 
-        self.mode, self.raw, self.node = SecretStash.decode(self.secret, self._bip39pw)
+        self.mode, self.raw = SecretStash.decode(self.secret)
+        #TODO: Check if self.mode is 'bitcoin_xprv', 'bitcoin_words', or 'unkown'
 
-        self.spots.append(self.node)
         self.spots.append(self.raw)
+
+        #Dummy node to maintain functionality. Remove when xpub code is removed.
+        self.node = trezorcrypto.bip32.from_seed(trezorcrypto.bip39.seed(trezorcrypto.bip39.from_data(self.raw), ''), 'secp256k1')
 
         self.chain = chains.current_chain()
 
@@ -222,7 +173,7 @@ class SensitiveValues:
 
         # Always store these volatile - Takes less than 1 second to recreate, and it will change whenever
         # a passphrase is entered, so no need to waste flash cycles on storing it.
-        if bip39_passphrase == '':
+        if True:
             settings.set_volatile('root_xfp', xfp)
             if save:
                 settings.set('xfp', xfp)

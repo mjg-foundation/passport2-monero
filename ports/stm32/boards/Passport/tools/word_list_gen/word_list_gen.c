@@ -8,10 +8,12 @@
 #include <string.h>
 
 uint32_t NUM_WORDS = 0;
-#define MAX_WORD_LEN 8
+#define MAX_WORD_LEN 12
+#define MAX_REPRESENTED_WORD_LEN 8
 
 extern const char* bip39_words[];
 extern const char* bytewords_words[];
+extern const char* monero_english_words[];
 
 #include <assert.h>
 #include <stdint.h>
@@ -49,11 +51,20 @@ uint32_t letter_to_offset(char ch) {
     return 999;
 }
 
-// Convert a seed word to its equivalent in keypad numbers - max will be 8 digits long
+// Convert a seed word to its equivalent in keypad numbers - max will be 9 digits long
 uint32_t word_to_keypad_numbers(char* word) {
     uint32_t result = 0;
 
     uint32_t len = strlen(word);
+    /*
+    The digits are represented by a 32 bit unsigned integer which has a maximum value of just over
+    4 billion. This means that the maximum value to represent the most digits is 999999999(9 digits).
+    Offsets are represented as a packed 16 bit unsigned integer, where every 2 bits is an offset for
+    the digit for a total of 8 offsets. That means that we cannot allow 9 digits because we're more
+    limited by the offsets. Monero's seed list has multiple words that are over 8 characters long, so
+    we need to stop before going over 8 digits otherwise we will return overflowed inaccurate integers.
+    */
+    if(len > MAX_REPRESENTED_WORD_LEN) len = MAX_REPRESENTED_WORD_LEN;
 
     for (uint32_t i = 0; i < len; i++) {
         char     letter = word[i];
@@ -67,6 +78,7 @@ uint16_t word_to_bit_offsets(char* word) {
     uint16_t result = 0;
 
     uint32_t len   = strlen(word);
+    if(len > MAX_REPRESENTED_WORD_LEN) len = MAX_REPRESENTED_WORD_LEN;
     uint16_t shift = 14;
 
     for (uint32_t i = 0; i < len; i++) {
@@ -119,7 +131,7 @@ void make_num_pairs_array(const char** words, char* prefix) {
 }
 
 void printUsage() {
-    printf("Usage: word_list_gen [bip39|bytewords]\n");
+    printf("Usage: word_list_gen [bip39|bytewords|monero_english]\n");
 }
 
 int main(int argc, char** argv) {
@@ -131,6 +143,9 @@ int main(int argc, char** argv) {
         } else if (strcmp(argv[1], "bytewords") == 0) {
             words     = bytewords_words;
             NUM_WORDS = 256;
+        } else if (strcmp(argv[1], "monero_english") == 0) {
+            words     = monero_english_words;
+            NUM_WORDS = 1626;
         }
     }
 
