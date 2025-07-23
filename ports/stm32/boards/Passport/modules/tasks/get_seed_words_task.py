@@ -11,6 +11,12 @@ from monero_mnemonic_languages import enum_values as languages
 async def get_seed_words_task(on_done):
     try:
         with stash.SensitiveValues() as sv:
+            if sv.mode == 'bitcoin_xprv':
+                raise Exception("Can't generate seed words from stored bitcoin xprv.")
+            elif sv.mode == 'bitcoin_var_bits':
+                raise Exception("Can't generate seed words from stored bitcoin variable bits.")
+            elif sv.mode == 'unknown':
+                raise TypeError("Can't generate seed words from unknown stored data.")
             assert sv.mode == 'words'
 
             words = moneromnemonics.legacy.from_seed(sv.raw, languages.english).split(' ')
@@ -19,4 +25,4 @@ async def get_seed_words_task(on_done):
     except Exception as e:
         # print('get_seed_words_task(): Exception: {}'.format(e))
         # Unable to read seed!
-        await on_done(None, None, '{}'.format(e))
+        await on_done(None, '{}'.format(e))

@@ -22,7 +22,7 @@ import uctypes
 import gc
 from pincodes import SE_SECRET_LEN
 
-marker_value = 0x82
+bitcoin_256_bits_marker = 0x82
 
 def blank_object(item):
     # Use/abuse uctypes to blank objects until python. Will likely
@@ -55,7 +55,7 @@ class SecretStash:
             vlen = len(seed_bits)
 
             assert vlen == 32
-            nv[0] = marker_value
+            nv[0] = bitcoin_256_bits_marker
             nv[1:1 + vlen] = seed_bits
         return nv
 
@@ -66,13 +66,26 @@ class SecretStash:
         #    type, secrets bytes
         #
         retrieved_marker = secret[0]
+        xprv_marker = 0x01
+        bitcoin_128_bits_marker = 0x80
+        bitcoin_192_bits_marker = 0x81
 
-        if retrieved_marker & marker_value:
-            seed_bits = secret[1:33]
-
-            return 'words', seed_bits
-        elif retrieved_marker == 0x01:
+        if retrieved_marker == bitcoin_128_bits_marker:
+            return 'words', bytes(secret[1:17] + secret[1:17])
+        elif retrieved_marker == bitcoin_192_bits_marker:
+            return 'words', bytes(secret[1:25] + secret[1:9])
+        elif retrieved_marker == bitcoin_256_bits_marker:
+            return 'words', secret[1:33]
+        elif retrieved_marker == xprv_marker:
             return 'bitcoin_xprv', None
+        elif retrieved_marker >= 16 and retrieved_marker <= 64:
+            if retrieved_marker == 16:
+                return 'words', bytes(secret[1:17] + secret[1:17])
+            elif retrieved_marker == 24:
+                return 'words', bytes(secret[1:25] + secret[1:9])
+            elif retrieved_marker == 32:
+                return 'words', secret[1:33]
+            return 'bitcoin_var_bits', None
         else:
             return 'unknown', None
 
@@ -103,12 +116,12 @@ class SensitiveValues:
         import chains
 
         self.mode, self.raw = SecretStash.decode(self.secret)
-        #TODO: Check if self.mode is 'bitcoin_xprv', 'bitcoin_words', or 'unkown'
 
-        self.spots.append(self.raw)
-
+        if self.raw != None:
+            self.spots.append(self.raw)
         #Dummy node to maintain functionality. Remove when xpub code is removed.
-        self.node = trezorcrypto.bip32.from_seed(trezorcrypto.bip39.seed(trezorcrypto.bip39.from_data(self.raw), ''), 'secp256k1')
+        input_for_node = self.raw if self.mode == 'words' else bytes(16)
+        self.node = trezorcrypto.bip32.from_seed(trezorcrypto.bip39.seed(trezorcrypto.bip39.from_data(input_for_node), ''), 'secp256k1')
 
         self.chain = chains.current_chain()
 
