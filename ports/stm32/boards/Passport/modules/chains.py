@@ -207,11 +207,11 @@ class ChainsBase:
 
 class BitcoinMain(ChainsBase):
     # see <https://github.com/bitcoin/bitcoin/blob/master/src/chainparams.cpp#L140>
-    ctype = 'BTC'
-    ctype_sats = 'sats'
-    name = 'Bitcoin'
-    core_name = 'Bitcoin Core'
-    menu_name = 'Bitcoin Mainnet'
+    ctype = 'XMR'
+    ctype_sats = 'piconeros'
+    name = 'Monero'
+    core_name = 'Monero Core'
+    menu_name = 'Monero Mainnet'
 
     slip132 = {
         AF_CLASSIC: Slip132Version(0x0488B21E, 0x0488ADE4, 'x'),
@@ -231,10 +231,10 @@ class BitcoinMain(ChainsBase):
 
 
 class BitcoinTestnet(BitcoinMain):
-    ctype = 'TBTC'
-    ctype_sats = 'tsats'
-    name = 'Bitcoin Testnet'
-    menu_name = 'Bitcoin Testnet'
+    ctype = 'TXMR'
+    ctype_sats = 'tpiconeros'
+    name = 'Monero Testnet'
+    menu_name = 'Monero Testnet'
 
     slip132 = {
         AF_CLASSIC: Slip132Version(0x043587cf, 0x04358394, 't'),
@@ -279,7 +279,7 @@ def current_chain():
     # return chain matching current setting
     from common import settings
 
-    chain = settings.get('chain', 'BTC')
+    chain = settings.get('chain', 'XMR')
 
     return get_chain(chain)
 

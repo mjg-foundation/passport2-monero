@@ -125,13 +125,13 @@ class MultisigWallet:
         (AF_P2WSH_P2SH, 'p2wsh-p2sh'),  # old name
     ]
 
-    def __init__(self, name, m_of_n, xpubs, id, addr_fmt=AF_P2SH, chain_type='BTC', deriv=None):
+    def __init__(self, name, m_of_n, xpubs, id, addr_fmt=AF_P2SH, chain_type='XMR', deriv=None):
         self.storage_idx = -1
 
         self.name = name[:MAX_MULTISIG_NAME_LEN]
         assert len(m_of_n) == 2, "Bad m_of_n length"
         self.M, self.N = m_of_n
-        self.chain_type = chain_type or 'BTC'
+        self.chain_type = chain_type or 'XMR'
         assert len(xpubs[0]) == 3, "Bad xpubs[0] length"
         self.xpubs = xpubs                  # list of (xfp(int), deriv, xpub(str))
         self.id = id                        # Unique id to associate multisig info with an account
@@ -174,7 +174,7 @@ class MultisigWallet:
         opts = dict()
         if self.addr_fmt != AF_P2SH:
             opts['ft'] = self.addr_fmt
-        if self.chain_type != 'BTC':
+        if self.chain_type != 'XMR':
             opts['ch'] = self.chain_type
 
         # Data compression: most legs will all use same derivation.
@@ -214,7 +214,7 @@ class MultisigWallet:
                 xpubs = [(a, derivs[b], c) for a, b, c in xpubs]
 
         rv = cls(name, m_of_n, xpubs, id, addr_fmt=opts.get('ft', AF_P2SH),
-                 chain_type=opts.get('ch', 'BTC'), deriv=deriv)
+                 chain_type=opts.get('ch', 'XMR'), deriv=deriv)
         rv.storage_idx = idx
 
         return rv

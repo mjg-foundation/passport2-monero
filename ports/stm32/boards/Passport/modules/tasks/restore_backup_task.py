@@ -77,7 +77,7 @@ async def restore_backup_task(on_done, decryption_password, backup_file_path):
 
     # Now restore the secret
     try:
-        chain = chains.get_chain(vals.get('chain', 'BTC'))
+        chain = chains.get_chain(vals.get('chain', 'XMR'))
 
         if 'raw_secret' not in vals:
             await on_done(Error.CORRUPT_BACKUP_FILE)

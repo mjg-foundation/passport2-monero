@@ -15,7 +15,10 @@ class SetChainFlow(Flow):
     async def show_setting_page(self):
         network = await ChainSettingPage(card_header={'title': 'Network', 'icon': lv.ICON_NETWORK}).show()
 
-        if network is 'TBTC':
+        if network is 'SXMR':
+            text = "Passport is in Stagenet mode. Use a separate seed to avoid issues " \
+                   "with malicious software wallets."
+        elif network is 'TXMR':
             text = "Passport is in Testnet mode. Use a separate seed to avoid issues " \
                    "with malicious software wallets."
             await ErrorPage(text).show()

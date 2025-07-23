@@ -9,8 +9,8 @@ import common
 
 class ChainSettingPage(SettingPage):
     OPTIONS = [
-        {'label': 'Mainnet', 'value': 'BTC'},
-        {'label': 'Testnet', 'value': 'TBTC'}
+        {'label': 'Mainnet', 'value': 'XMR'},
+        {'label': 'Testnet', 'value': 'TXMR'}
     ]
 
     def __init__(self, card_header=None, statusbar=None):

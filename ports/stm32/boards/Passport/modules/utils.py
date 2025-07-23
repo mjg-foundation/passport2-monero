@@ -788,7 +788,7 @@ def recolor(color, text):
 def is_valid_address(address):
     import chains
     chain = chains.current_chain()
-    if chain.ctype == 'BTC':
+    if chain.ctype == 'XMR':
         return (len(address) > 3) and (address[0] == '1' or address[0] == '3' or
                                        (address[0] == 'b' and address[1] == 'c' and address[2] == '1'))
     else:
