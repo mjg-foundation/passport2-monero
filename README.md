@@ -47,6 +47,14 @@ Code specific to Passport is included in the following folders:
 
 Please see [`DEVELOPMENT.md`](DEVELOPMENT.md) for information on developing for Passport.
 
+## Monero Airgapped Signing
+
+The draft Monero airgapped signing standard is documented in
+[`docs/monero-airgapped-signing-standard.md`](docs/monero-airgapped-signing-standard.md).
+It describes the proposed MASS-1 envelope for exchanging Monero unsigned
+transaction sets, signed transaction sets, outputs, and key images over microSD
+or animated QR.
+
 ## Verifying Firmware SHA Sums
 
 To make building and verifying the firmware a simple process, there is a Dockerfile in the project that builds an image to be used to build the firmware. Using [`just`](https://github.com/casey/just), the following command can be used to verify the reproducability of the firmware. Make sure to substitute `<the sha sum>` for the SHA string to verify.
