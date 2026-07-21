@@ -16,9 +16,11 @@ pinned to commit
 [`4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5`](https://github.com/monero-project/monero/tree/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5).
 It does not define a new transaction protocol or a Monero consensus format.
 
-The words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** describe what an
-implementation has to do to remain byte-compatible with that pinned `wallet2`
-implementation. They do not freeze future Monero wallet formats.
+The words **MUST**, **MUST NOT**, **SHOULD**, and **MAY** identify either a
+wire-compatibility requirement of the pinned `wallet2` implementation or an
+explicit decoder-validation requirement in this profile. The surrounding text
+states which kind applies. These requirements do not freeze future Monero
+wallet formats.
 
 This profile covers:
 
@@ -150,6 +152,24 @@ Version 5 uses Monero `binary_archive`, not epee portable
 storage. Field names are not emitted. The exact declaration order is therefore
 part of the byte format. The relevant implementation is
 [`binary_archive.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/binary_archive.h#L95-L236).
+
+The generic encoders used by the structures below are pinned separately:
+
+- unsigned varints in
+  [`varint.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/common/varint.h#L55-L127);
+- strings in
+  [`string.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/string.h#L35-L61);
+- pairs in
+  [`pair.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/pair.h#L40-L107);
+- tuples in
+  [`tuple.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/tuple.h#L39-L167);
+- sequential and associative containers in
+  [`container.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/container.h#L41-L141)
+  and
+  [`containers.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/containers.h#L47-L127);
+  and
+- tagged alternatives in
+  [`variant.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/serialization/variant.h#L63-L145).
 
 The notation used below has these definitions:
 
@@ -348,12 +368,114 @@ greater than or equal to `1`, it also consumes field 13. The CLI
 covered by this profile. Non-empty `multisig_sigs` values belong to the separate
 multisig workflow and are outside this profile.
 
-The transaction field recursively uses Monero's canonical transaction and
-RingCT serializers. Implementations MUST use those serializers for the pinned
-release rather than a JSON representation. The entry point is
-[`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L170-L317).
 The remaining `pending_tx` declaration is in
 [`wallet2.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/wallet/wallet2.h#L624-L692).
+
+#### Embedded `transaction`
+
+`pending_tx.tx` is a concrete `transaction` object written inline. It does not
+have an outer `transaction` variant tag. Its prefix is:
+
+```text
+transaction_prefix =
+    uvarint(version)
+    uvarint(unlock_time)
+    vector<txin_v> vin
+    vector<tx_out> vout
+    vector<u8> extra
+```
+
+The prefix fields and input/output structures are defined in
+[`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L61-L190).
+A normal cold-signed spend uses `txin_to_key` inputs:
+
+```text
+txin_to_key =
+    uvarint(amount)
+    vector<u64-varint> key_offsets
+    blob<32> key_image
+
+tx_out =
+    uvarint(amount)
+    tagged txout_target_v target
+```
+
+The one-byte input and output tags are registered at
+[`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L569-L581):
+
+| Alternative | Tag |
+| --- | ---: |
+| `txin_gen` | `ff` |
+| `txin_to_script` | `00` |
+| `txin_to_scripthash` | `01` |
+| `txin_to_key` | `02` |
+| `txout_to_script` | `00` |
+| `txout_to_scripthash` | `01` |
+| `txout_to_key` | `02` |
+| `txout_to_tagged_key` | `03` |
+
+After the prefix, the complete transaction serializer follows the branches in
+[`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L242-L317):
+
+- Version `1` writes legacy signatures. Their dimensions are derived from
+  `vin`; neither the outer signature array nor each per-input array has a
+  normal vector-length prefix.
+- Version `2`, with at least one input, writes the RingCT base.
+- A full, unpruned transaction whose RingCT type is not `Null` then writes the
+  RingCT prunable part.
+
+#### RingCT base and prunable branches
+
+The RingCT type values are fixed by
+[`RCTType`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L298-L306),
+and the nested proof/signature records are declared earlier in
+[`rctTypes.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L135-L278).
+The base serializer is
+[`rctSigBase::serialize_rctsig_base`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L318-L404):
+
+```text
+u8 type
+if type != Null:
+    uvarint(txnFee)
+    if type == Simple:
+        inputs * blob<32> pseudoOuts
+    outputs * ecdhInfo
+    outputs * blob<32> outPk.mask
+```
+
+The input and output counts come from the transaction prefix and are not
+written again. For `Bulletproof2`, `CLSAG`, and `BulletproofPlus`, each
+`ecdhInfo` writes only its eight-byte amount field. Older types write the full
+32-byte mask followed by the 32-byte amount. Only the commitment/mask half of
+each `outPk` is written because its destination key is already in `vout`.
+
+The prunable serializer is
+[`rctSigPrunable::serialize_rctsig_prunable`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L416-L602).
+Its important derived-length rules are:
+
+- `Full` and `Simple` write exactly `outputs` Borromean `rangeSig` records
+  first. This derived array has no count prefix.
+- `BulletproofPlus` writes a uvarint proof count followed by that many
+  Bulletproof+ records.
+- `Bulletproof2` and `CLSAG` write a uvarint Bulletproof count. The older
+  `Bulletproof` type writes that count as a fixed little-endian `u32`.
+- `CLSAG` and `BulletproofPlus` write exactly one CLSAG per input. Each CLSAG
+  has `mixin + 1` scalar entries in `s`, followed by `c1` and `D`; the `s`
+  length is not written as a normal vector count.
+- Older RingCT types write MG records whose matrix dimensions are derived from
+  the RingCT type, input count, and mixin.
+- `Bulletproof`, `Bulletproof2`, `CLSAG`, and `BulletproofPlus` finish with
+  exactly one 32-byte `pseudoOut` per input.
+
+The `mixin` argument is derived as the first `txin_to_key.key_offsets.size()`
+minus one by the
+[transaction serializer](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L304-L309);
+it is not stored separately.
+
+The proof records themselves use the declaration order in the pinned
+`rctTypes.h` range above. Implementations MUST follow these type-dependent
+serializers rather than applying the generic `vector<T>` rule to arrays whose
+sizes are derived from transaction context.
 
 ## Embedded unsigned-schema compatibility
 
@@ -434,6 +556,27 @@ SHA-256 of those four plaintext bytes:
 | third `00` | zero key images |
 | fourth `00` | zero output-key/key-image map entries |
 
+### Non-empty encrypted round-trip fixture
+
+This repository includes a frozen pair in
+[`docs/fixtures/monero-v0.18.5.1`](docs/fixtures/monero-v0.18.5.1/README.md).
+It was generated by the pinned upstream `cold_signing` functional test on an
+isolated regtest chain with the official v0.18.5.1 binaries. The only local
+instrumentation printed the already-generated wallet RPC hex fields and the
+public test view key; it did not change any request or assertion.
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| unsigned | 3,204 | `0a68ca780e5833d2808b07b4cd58a6519bc128b8e7197126bd4292602f315ead` |
+| signed | 8,522 | `e09504167ea03340172079ca58a711186860b7d41fe38c82e008fbd36c14ebb6` |
+
+The fixture metadata supplies the exact files, private test view key, seed,
+IVs, archive hash, generation command, and expected lifecycle. The upstream
+harness accepted the unsigned set in `describe_transfer`, signed it, accepted
+the signed set into the regtest mempool, mined it, and reported
+`Done, 1/1 tests passed`. This is an end-to-end compatibility vector, not a
+claim that encrypted writer output is deterministic.
+
 ## Decoder procedure
 
 A compatible version 5 decoder performs these operations in order:
@@ -489,7 +632,8 @@ For each non-empty unsigned/signed fixture pair, record:
 - fixture role and expected decoded field tree;
 - exact file length and SHA-256 digest;
 - outer magic and version;
-- decrypted plaintext hexadecimal encoding; and
+- decrypted plaintext hexadecimal encoding, or enough public test key material
+  to reproduce decryption plus the accepted semantic decoder output; and
 - expected accept/reject result at each lifecycle step.
 
 Freeze one generated encrypted pair if exact-byte regression tests are useful.
