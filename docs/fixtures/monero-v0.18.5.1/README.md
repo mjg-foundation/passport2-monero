@@ -34,8 +34,8 @@ recover the exact files passed through wallet RPC.
 - Account address:
   `42ey1afDFnn4886T7196doS9GPMzexD9gXpsZJDwVjeRVdFCSoHnv7KPbBeGpzJBzHRCAs9UxqeoyFQMYbqSWYTfJJQAWDm`.
 
-The seed and view key are public test material. They MUST NOT be used for
-production funds.
+The seed and private view key are published test material. They MUST NOT be
+used for production funds.
 
 ## Exact files
 
@@ -61,7 +61,7 @@ verified:
 - the watch-only wallet accepted that exact signed set into its mempool; and
 - the transaction confirmed after the regtest daemon mined one block.
 
-The command was:
+An equivalent upstream command on a Unix-like source build is:
 
 ```shell
 python3 tests/functional_tests/functional_tests_rpc.py \
