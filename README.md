@@ -47,6 +47,10 @@ Code specific to Passport is included in the following folders:
 
 Please see [`DEVELOPMENT.md`](DEVELOPMENT.md) for information on developing for Passport.
 
+The source-derived compatibility profile for the version 5 air-gapped
+transaction files implemented by Monero `v0.18.5.1` is documented in
+[`MONERO-COLD-SIGNING-FORMAT.md`](MONERO-COLD-SIGNING-FORMAT.md).
+
 ## Verifying Firmware SHA Sums
 
 To make building and verifying the firmware a simple process, there is a Dockerfile in the project that builds an image to be used to build the firmware. Using [`just`](https://github.com/casey/just), the following command can be used to verify the reproducability of the firmware. Make sure to substitute `<the sha sum>` for the SHA string to verify.
