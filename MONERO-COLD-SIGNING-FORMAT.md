@@ -204,8 +204,11 @@ Additional rules:
   byte in standard containers are also encoded as uvarints.
 - Variant tags occupy one byte and are followed by the selected value.
 - `crypto::public_key`, `crypto::secret_key`, `crypto::key_image`, and
-  `rct::key` are 32-byte blobs. `rct::ctkey` is a 64-byte blob, and
-  `rct::multisig_kLRki` is a 128-byte blob.
+  `rct::key` are 32-byte blobs. `rct::ctkey` is the 64-byte concatenation
+  `dest || mask`. `rct::multisig_kLRki` is the 128-byte concatenation
+  `k || L || R || ki`, with each component occupying 32 bytes. These layouts
+  follow the member order and blob serializers in
+  [`rctTypes.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L93-L120).
 - `account_public_address` is its 32-byte spend public key followed by its
   32-byte view public key.
 - The top-level decoder MUST consume all decrypted bytes. The Monero
@@ -262,6 +265,9 @@ There is no leading version for this structure. Fields occur in this order:
 [`wallet2.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/wallet/wallet2.h#L561-L617)
 and
 [`rctTypes.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L308-L316).
+The `range_proof_type` wire values are `RangeProofBorromean = 0`,
+`RangeProofBulletproof = 1`, `RangeProofMultiOutputBulletproof = 2`, and
+`RangeProofPaddedBulletproof = 3`.
 
 ### `tx_source_entry`
 
@@ -269,7 +275,7 @@ Fields occur in this order:
 
 | # | Field | Encoding |
 | ---: | --- | --- |
-| 1 | `outputs` | vector of `pair<u64,rct::ctkey>`; pair count `2`, index as uvarint, then 64-byte `ctkey` |
+| 1 | `outputs` | vector of `pair<u64,rct::ctkey>`; pair count `2`, index as uvarint, then 64-byte `ctkey` as `dest || mask` |
 | 2 | `real_output` | fixed little-endian `u64` |
 | 3 | `real_out_tx_key` | 32-byte public key |
 | 4 | `real_out_additional_tx_keys` | vector of 32-byte public keys |
@@ -277,7 +283,7 @@ Fields occur in this order:
 | 6 | `amount` | fixed little-endian `u64` |
 | 7 | `rct` | bool |
 | 8 | `mask` | 32-byte `rct::key` |
-| 9 | `multisig_kLRki` | 128-byte blob |
+| 9 | `multisig_kLRki` | 128-byte blob as `k || L || R || ki` |
 
 A decoder MUST reject an entry where `real_output >= outputs.size()`, matching
 the structure serializer. See
@@ -464,9 +470,11 @@ The one-byte input and output tags are registered at
 After the prefix, the complete transaction serializer follows the branches in
 [`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L242-L317):
 
-- Version `1` writes legacy signatures. Their dimensions are derived from
-  `vin`; neither the outer signature array nor each per-input array has a
-  normal vector-length prefix.
+- Version `1` writes legacy signatures. The outer signature array is traversed
+  using `vin.size()` and begins without a vector-length prefix. Each per-input
+  `vector<signature>` uses the normal container encoding, so it begins with a
+  uvarint element count. When saving, that inner vector's size must equal
+  `get_signature_size(vin[i])`.
 - Version `2`, with at least one input, writes the RingCT base.
 - A full, unpruned transaction whose RingCT type is not `Null` then writes the
   RingCT prunable part.
@@ -477,6 +485,9 @@ The RingCT type values are fixed by
 [`RCTType`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L298-L306),
 and the nested proof/signature records are declared earlier in
 [`rctTypes.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L135-L278).
+The one-byte wire values are `Null = 0`, `Full = 1`, `Simple = 2`,
+`Bulletproof = 3`, `Bulletproof2 = 4`, `CLSAG = 5`, and
+`BulletproofPlus = 6`.
 The base serializer is
 [`rctSigBase::serialize_rctsig_base`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L318-L404):
 
@@ -760,7 +771,7 @@ Fixture keys MUST be generated only for public testing and MUST NOT have ever
 controlled live funds. Never publish a production seed or private view/spend
 key.
 
-The repository's historical `tests/data/unsigned_monero_tx` and
+The pinned Monero source tree's historical `tests/data/unsigned_monero_tx` and
 `tests/data/signed_monero_tx` samples use outer version 3. They MUST NOT be
 labelled as version 5 fixtures.
 
