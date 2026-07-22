@@ -131,6 +131,14 @@ The pinned implementation constructs the frame as follows:
 6. Sign that hash using the private view key and its corresponding public key,
    then append the 64-byte signature.
 
+The signature is Monero's packed `crypto::signature`, serialized as the raw
+32-byte scalar `c` followed by the raw 32-byte scalar `r`. It is generated and
+checked by Monero's `generate_signature` and `check_signature` operations; it
+is not an Ed25519 signature. See the
+[`crypto::signature` layout](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/crypto/crypto.h#L98-L114)
+and the
+[`generate_signature`/`check_signature` implementation](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/crypto/crypto.cpp#L290-L340).
+
 The implementation is in
 [`wallet2.cpp`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/wallet/wallet2.cpp#L15510-L15581),
 and the key derivation and IV sizes are in
@@ -400,6 +408,45 @@ tx_out =
     tagged txout_target_v target
 ```
 
+The complete input and output alternative bodies are:
+
+```text
+txin_gen =
+    uvarint(height)
+
+txin_to_script =
+    blob<32> prev
+    uvarint(prevout)
+    vector<u8> sigset
+
+txin_to_scripthash =
+    blob<32> prev
+    uvarint(prevout)
+    txout_to_script script
+    vector<u8> sigset
+
+txout_to_script =
+    vector<blob<32>> keys
+    vector<u8> script
+
+txout_to_scripthash =
+    blob<32> hash
+
+txout_to_key =
+    blob<32> key
+
+txout_to_tagged_key =
+    blob<32> key
+    blob<1> view_tag
+```
+
+`txout_to_key` and `txout_to_scripthash` are blob-serialized, so their bodies
+have no additional object marker or length prefix. A normal cold-signed spend
+uses `txin_to_key`; current transactions can use `txout_to_tagged_key`. The
+other bodies above complete the registered binary variants. Their declarations
+and serializers are in
+[`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L61-L165).
+
 The one-byte input and output tags are registered at
 [`cryptonote_basic.h`](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L569-L581):
 
@@ -467,15 +514,83 @@ Its important derived-length rules are:
 - `Bulletproof`, `Bulletproof2`, `CLSAG`, and `BulletproofPlus` finish with
   exactly one 32-byte `pseudoOut` per input.
 
+The proof records use these exact byte orders:
+
+```text
+range_sig =
+    64 * blob<32> asig.s0
+    64 * blob<32> asig.s1
+    blob<32>      asig.ee
+    64 * blob<32> Ci
+
+bulletproof =
+    blob<32> A
+    blob<32> S
+    blob<32> T1
+    blob<32> T2
+    blob<32> taux
+    blob<32> mu
+    vector<blob<32>> L
+    vector<blob<32>> R
+    blob<32> a
+    blob<32> b
+    blob<32> t
+
+bulletproof_plus =
+    blob<32> A
+    blob<32> A1
+    blob<32> B
+    blob<32> r1
+    blob<32> s1
+    blob<32> d1
+    vector<blob<32>> L
+    vector<blob<32>> R
+```
+
+The `L` and `R` vectors each carry their own normal uvarint element count.
+For both proof types they MUST be non-empty and have equal counts. The `V`
+commitment vector is deliberately absent from both records and is restored
+from `outPk`; its position in the C++ structure declaration is not part of the
+wire format. These rules come from the explicit
+[`Bulletproof` and `BulletproofPlus` serializers](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L212-L278).
+
+The context-sized signature records are:
+
+```text
+clsag =
+    (mixin + 1) * blob<32> s
+    blob<32> c1
+    blob<32> D
+
+mg_sig =
+    (mixin + 1) * row
+    blob<32> cc
+
+row =
+    # Simple, Bulletproof, or Bulletproof2
+    2 * blob<32>
+
+    # Full
+    (inputs + 1) * blob<32>
+```
+
+There is one `mg_sig` per input for `Simple`, `Bulletproof`, and
+`Bulletproof2`, but exactly one for `Full`. No count prefixes are written for
+the MG array, its rows, or its row elements. The reconstructible CLSAG `I` and
+MG `II` values are not serialized. The enclosing proof-count fields described
+above remain present; only these context-derived arrays omit their normal
+vector counts.
+
 The `mixin` argument is derived as the first `txin_to_key.key_offsets.size()`
 minus one by the
 [transaction serializer](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/cryptonote_basic/cryptonote_basic.h#L304-L309);
 it is not stored separately.
 
-The proof records themselves use the declaration order in the pinned
-`rctTypes.h` range above. Implementations MUST follow these type-dependent
-serializers rather than applying the generic `vector<T>` rule to arrays whose
-sizes are derived from transaction context.
+Implementations MUST follow these type-dependent serializers rather than
+applying the generic `vector<T>` rule to arrays whose sizes are derived from
+transaction context. The complete branch logic, including the fields omitted
+because they are reconstructed, is in the pinned
+[`rctSigPrunable` serializer](https://github.com/monero-project/monero/blob/4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5/src/ringct/rctTypes.h#L416-L602).
 
 ## Embedded unsigned-schema compatibility
 
@@ -571,9 +686,9 @@ published private test view key; it did not change any request or assertion.
 | signed | 8,522 | `e09504167ea03340172079ca58a711186860b7d41fe38c82e008fbd36c14ebb6` |
 
 The fixture metadata supplies the exact files, private test view key, seed,
-IVs, archive hash, generation command, and expected lifecycle. The upstream
-harness accepted the unsigned set in `describe_transfer`, signed it, accepted
-the signed set into the regtest mempool, mined it, and reported
+IVs, downloaded CLI archive hash, generation command, and expected lifecycle.
+The upstream harness accepted the unsigned set in `describe_transfer`, signed
+it, accepted the signed set into the regtest mempool, mined it, and reported
 `Done, 1/1 tests passed`. This is an end-to-end compatibility vector, not a
 claim that encrypted writer output is deterministic.
 

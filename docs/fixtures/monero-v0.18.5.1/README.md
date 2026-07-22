@@ -16,8 +16,9 @@ recover the exact files passed through wallet RPC.
 - Source: Monero `v0.18.5.1`, commit
   `4f92268d7c16741cfb41e5bbe2aa46cc260a9ea5`.
 - Generator: the unmodified test flow in
-  `tests/functional_tests/cold_signing.py`, with print-only instrumentation for
-  the private test view key and the two RPC hex fields.
+  `tests/functional_tests/cold_signing.py`, with the included
+  [`capture.patch`](capture.patch) adding print-only instrumentation for the
+  private test view key and the two RPC hex fields.
 - Runtime: the
   [official Windows CLI archive](https://www.getmonero.org/downloads/)
   `monero-win-x64-v0.18.5.1.zip`.
@@ -74,6 +75,16 @@ To verify a fixture digest on a Unix-like host:
 tr -d '[:space:]' < unsigned_monero_tx.hex | xxd -r -p | sha256sum
 tr -d '[:space:]' < signed_monero_tx.hex | xxd -r -p | sha256sum
 ```
+
+The dependency-free verifier checks both exact hashes and the envelope fields:
+
+```shell
+python3 verify_fixture.py
+```
+
+To reproduce the captured fields, apply `capture.patch` to the pinned Monero
+source tree before running the functional-test command above. The patch changes
+only diagnostic output and leaves every request and assertion intact.
 
 Exact encrypted bytes are reference vectors, not canonical writer output.
 Fresh runs may use different IVs, signatures, transaction randomness, and
