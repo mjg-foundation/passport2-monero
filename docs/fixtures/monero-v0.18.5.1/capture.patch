@@ -1,0 +1,20 @@
+diff --git a/tests/functional_tests/cold_signing.py b/tests/functional_tests/cold_signing.py
+index bd48671a2..e4b751d29 100755
+--- a/tests/functional_tests/cold_signing.py
++++ b/tests/functional_tests/cold_signing.py
+@@ -44,2 +44,3 @@ class ColdSigningTest():
+     def run_test(self):
++        self.fixture_emitted = False
+         self.reset()
+@@ -76,2 +77,3 @@ class ColdSigningTest():
+         view_key = self.cold_wallet.query_key("view_key").key
++        self.fixture_view_key = view_key
+         res = self.hot_wallet.generate_from_keys(viewkey = view_key, address = STANDARD_ADDRESS)
+@@ -178,2 +180,7 @@ class ColdSigningTest():
+         signed_txset = res.signed_txset
++        if not self.fixture_emitted:
++            print('FIXTURE_VIEW_KEY=' + self.fixture_view_key)
++            print('FIXTURE_UNSIGNED=' + unsigned_txset)
++            print('FIXTURE_SIGNED=' + signed_txset)
++            self.fixture_emitted = True
+         assert len(res.tx_hash_list) == 1
